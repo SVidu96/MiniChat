@@ -1,4 +1,4 @@
-import { showModal, addMessage, updateUserList, clearMessages } from './ui.js';
+import { showModal, copyRoomUrlToClipboard } from './ui.js';
 import { setupSocketHandlers, sendMessage, joinRoom, createRoom } from './socket.js';
 
 const form = document.getElementById('chat-form');
@@ -31,11 +31,13 @@ form.addEventListener('submit', function(e) {
 roomForm.addEventListener('submit', function(e) {
   e.preventDefault();
   const roomId = roomIdInput.value.trim();
-  joinRoom(roomId);
+  const username = document.getElementById('user-name').value.trim();
+  joinRoom(roomId, username);
 });
 createRoomBtn.addEventListener('click', function(e) {
   e.preventDefault();
-  createRoom();
+  const username = document.getElementById('user-name').value.trim();
+  createRoom(username);
 });
 
 // Show modal on load
@@ -51,13 +53,73 @@ if (toggleUsersBtn) {
   });
 }
 
-// If URL contains /roomID, auto-fill and auto-join
+// Try to restore session from sessionStorage
+const session = (function() {
+  try {
+    return {
+      roomId: sessionStorage.getItem('minichat_roomId'),
+      username: sessionStorage.getItem('minichat_username')
+    };
+  } catch { return {}; }
+})();
+
 const urlParts = window.location.pathname.split('/').filter(Boolean);
-if (urlParts.length === 1 && urlParts[0] !== '') {
+if (session.roomId && session.username && urlParts.length === 1 && urlParts[0] !== '' && session.roomId !== urlParts[0]) {
+  // If URL roomId is different from cached, clear cache
+  sessionStorage.removeItem('minichat_roomId');
+  sessionStorage.removeItem('minichat_username');
+}
+
+if (session.roomId && session.username && (!urlParts.length || urlParts[0] === session.roomId)) {
+  // If session exists and matches URL (or no room in URL), auto-join room with saved username
+  window.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('room-id').value = session.roomId;
+    document.getElementById('user-name').value = session.username;
+    joinRoom(session.roomId, session.username);
+  });
+} else if (urlParts.length === 1 && urlParts[0] !== '') {
+  // If URL contains /roomID, pre-fill but do NOT auto-join. Show modal and require user to enter name and submit.
   const roomId = urlParts[0];
   document.getElementById('room-id').value = roomId;
-  // Try to join automatically
+  // Show modal and focus username input
   window.addEventListener('DOMContentLoaded', () => {
-    joinRoom(roomId);
+    const userNameInput = document.getElementById('user-name');
+    if (userNameInput) userNameInput.focus();
+    const modal = document.getElementById('room-modal');
+    if (modal) {
+      modal.classList.add('show', 'd-flex', 'align-items-center', 'justify-content-center');
+      modal.style.display = 'flex';
+      modal.style.visibility = '';
+      modal.style.position = '';
+      modal.setAttribute('aria-hidden', 'false');
+    }
+    const mainContent = document.getElementById('main-content');
+    if (mainContent) {
+      mainContent.classList.add('d-none');
+    }
+  });
+}
+
+// Share Room Link button logic
+const shareLinkBtn = document.getElementById('share-link-btn');
+if (shareLinkBtn) {
+  const buttonText = shareLinkBtn.innerHTML;
+  shareLinkBtn.addEventListener('click', () => {
+    // Try to get current roomId from sessionStorage or URL
+    let roomId = sessionStorage.getItem('minichat_roomId');
+    if (!roomId) {
+      // Try to get from URL
+      const urlParts = window.location.pathname.split('/').filter(Boolean);
+      if (urlParts.length === 1 && urlParts[0] !== '') {
+        roomId = urlParts[0];
+      }
+    }
+    if (roomId) {
+      copyRoomUrlToClipboard(roomId);
+      shareLinkBtn.textContent = 'Copied!';
+      setTimeout(() => {
+        shareLinkBtn.innerHTML = buttonText;
+      }, 1200);
+    }
   });
 }
