@@ -27,19 +27,22 @@ export function addMessage({ username, message, timestamp }, isSystem = false) {
     div.style.opacity = '0.85';
     div.textContent = message;
   } else if (isMine) {
-    div.className = 'border rounded p-2 mb-2 bg-primary text-white ms-auto text-end';
+    div.className = 'border rounded p-2 bg-primary text-white ms-auto text-end';
     div.style.maxWidth = 'max-content';
     div.innerHTML = `<strong class="me-1">${username}:</strong> ${message}`;
-    timeDiv.className = 'text-light small me-2';
-    timeDiv.textContent = timestamp + "ss";
+    timeDiv.className = 'text small text-end mb-2';
+    timeDiv.textContent = timestamp;
+    
 
   } else {
-    div.className = 'border rounded p-2 mb-2 bg-white text-start';
+    div.className = 'border rounded p-2 bg-white text-start';
     div.style.maxWidth = 'max-content';
-    div.innerHTML = `<strong class="me-1">${username}:</strong> ${message}<br/><span class="text-secondary small me-2">[${timestamp}]</span>`;
+    div.innerHTML = `<strong class="me-1">${username}:</strong> ${message}</span>`;
+    timeDiv.className = 'text small text-start mb-2';
+    timeDiv.textContent = timestamp;
   }
-
   messages.appendChild(div);
+  messages.append(timeDiv);
   messages.scrollTop = messages.scrollHeight;
 }
 
